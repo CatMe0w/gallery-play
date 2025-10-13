@@ -2,6 +2,8 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 export type MItem = {
   id: number;
   path: string;
@@ -138,7 +140,7 @@ export default function MasonryColumns({ items, cols, colWidth, gap, makeHref, m
                       {it.mediaType === "video" ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src={`/api/vthumb/${it.path}`}
+                          src={`${BASE}/api/vthumb/${it.path}`}
                           alt={it.name}
                           width={w}
                           height={displayH}

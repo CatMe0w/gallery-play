@@ -43,6 +43,7 @@ Open http://localhost:3000 to browse.
 
 - Local-only usage: there is no CORS or auth hardening for public exposure. Do not expose directly to the Internet.
 - Initial scan time depends on total files. If you make changes to the gallery directory, click "Refresh Index" to rescan.
+- Set `NEXT_PUBLIC_BASE_PATH` in `.env.local` if you want to serve from a subpath (e.g. behind a reverse proxy).
 
 ## License
 

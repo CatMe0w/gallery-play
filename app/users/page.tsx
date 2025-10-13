@@ -6,6 +6,8 @@ import { useColumnSetting } from "../../lib/columns";
 import { COL_WIDTH, COL_GAP } from "../../lib/constants";
 import Link from "next/link";
 
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 type UserCover = {
   id: number;
   path: string;
@@ -25,7 +27,7 @@ async function fetchUsers(cursor?: Cursor, limit = 60, platform?: string) {
   if (cursor?.cursorMtime) params.set("cursorMtime", cursor.cursorMtime);
   if (cursor?.cursorId) params.set("cursorId", cursor.cursorId);
   if (platform) params.set("platform", platform);
-  const res = await fetch(`/api/users?${params.toString()}`);
+  const res = await fetch(`${BASE}/api/users?${params.toString()}`);
   if (!res.ok) throw new Error(`failed: ${res.status}`);
   return res.json() as Promise<{ items: UserCover[]; nextCursor: Cursor; total: number }>;
 }
@@ -120,8 +122,8 @@ export default function UsersPage() {
             cols={cols}
             colWidth={COL_WIDTH}
             gap={COL_GAP}
-            makeHref={(it) => `/user/${it.platform}/${it.user}`}
-            makeThumbSrc={(it) => `/api/fs/${it.path}`}
+            makeHref={(it) => `${BASE}/user/${it.platform}/${it.user}`}
+            makeThumbSrc={(it) => `${BASE}/api/fs/${it.path}`}
             renderFooter={(it) => (
               <>
                 <span className="truncate">

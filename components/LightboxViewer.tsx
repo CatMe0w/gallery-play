@@ -3,6 +3,8 @@
 import React, { useCallback, useEffect, useMemo } from "react";
 import type { MItem } from "./MasonryColumns";
 
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 export type LightboxViewerProps = {
   items: MItem[];
   index: number; // current index being viewed
@@ -15,8 +17,8 @@ export default function LightboxViewer({ items, index, onClose, onNavigate }: Li
 
   const src = useMemo(() => {
     if (!it) return "";
-    if (it.mediaType === "video") return `/api/fs/${it.path}`;
-    return `/api/fs/${it.path}`;
+    if (it.mediaType === "video") return `${BASE}/api/fs/${it.path}`;
+    return `${BASE}/api/fs/${it.path}`;
   }, [it]);
 
   const title = useMemo(() => {

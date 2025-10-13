@@ -7,6 +7,8 @@ import { COL_WIDTH, COL_GAP } from "../../../../lib/constants";
 import MasonryColumns, { type MItem } from "../../../../components/MasonryColumns";
 import LightboxViewer from "../../../../components/LightboxViewer";
 
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 type Img = {
   id: number;
   path: string;
@@ -28,7 +30,7 @@ async function fetchImages(platform: string, user: string, cursor?: Cursor, limi
   params.set("user", user);
   if (cursor?.cursorMtime) params.set("cursorMtime", cursor.cursorMtime);
   if (cursor?.cursorId) params.set("cursorId", cursor.cursorId);
-  const res = await fetch(`/api/images?${params.toString()}`);
+  const res = await fetch(`${BASE}/api/images?${params.toString()}`);
   if (!res.ok) throw new Error(`failed: ${res.status}`);
   return res.json() as Promise<{ items: Img[]; nextCursor: Cursor; total: number; galleryDir: string }>;
 }
@@ -140,10 +142,10 @@ export default function UserView({ params }: { params: Promise<{ platform: strin
             cols={cols}
             colWidth={COL_WIDTH}
             gap={COL_GAP}
-            makeHref={(it) => `/api/fs/${it.path}`}
+            makeHref={(it) => `${BASE}/api/fs/${it.path}`}
             getAnchorProps={(it) => ({ "data-name": it.name })}
             onItemClick={(_, idx) => setViewerIndex(idx)}
-            makeThumbSrc={(it) => `/api/fs/${it.path}`}
+            makeThumbSrc={(it) => `${BASE}/api/fs/${it.path}`}
             renderFooter={(it) => (
               <>
                 <span className="truncate" title={it.name}>
