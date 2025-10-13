@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useColumnSetting } from "../lib/columns";
-import { COL_WIDTH, COL_GAP } from "../lib/constants";
-import MasonryColumns, { type MItem } from "../components/MasonryColumns";
-import LightboxViewer from "../components/LightboxViewer";
+import { useColumnSetting } from "../../../../lib/columns";
+import { COL_WIDTH, COL_GAP } from "../../../../lib/constants";
+import MasonryColumns, { type MItem } from "../../../../components/MasonryColumns";
+import LightboxViewer from "../../../../components/LightboxViewer";
 
 type Img = {
   id: number;
@@ -21,24 +21,34 @@ type Img = {
 
 type Cursor = { cursorMtime: string; cursorId: string } | null;
 
-async function fetchImages(cursor?: Cursor, limit = 60, refresh = false) {
+async function fetchImages(platform: string, user: string, cursor?: Cursor, limit = 60) {
   const params = new URLSearchParams();
   params.set("limit", String(limit));
+  params.set("platform", platform);
+  params.set("user", user);
   if (cursor?.cursorMtime) params.set("cursorMtime", cursor.cursorMtime);
   if (cursor?.cursorId) params.set("cursorId", cursor.cursorId);
-  if (refresh) params.set("refresh", "1");
   const res = await fetch(`/api/images?${params.toString()}`);
   if (!res.ok) throw new Error(`failed: ${res.status}`);
   return res.json() as Promise<{ items: Img[]; nextCursor: Cursor; total: number; galleryDir: string }>;
 }
 
-export default function Home() {
+export default function UserView({ params }: { params: Promise<{ platform: string; user: string }> }) {
+  const [route, setRoute] = useState<{ platform: string; user: string } | null>(null);
+  useEffect(() => {
+    (async () => {
+      const p = await params;
+      setRoute({ platform: p.platform, user: p.user });
+    })();
+  }, [params]);
+
   const [items, setItems] = useState<Img[]>([]);
   const [cursor, setCursor] = useState<Cursor>(null);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
-  const [meta, setMeta] = useState<{ total: number; galleryDir: string } | null>(null);
-  const { cols, setCols, maxWidthPx, columnStyle } = useColumnSetting(3);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  const { cols, setCols, columnStyle, maxWidthPx } = useColumnSetting(3);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   const mergeUnique = useCallback((prev: Img[], incoming: Img[]) => {
@@ -49,27 +59,29 @@ export default function Home() {
     return Array.from(map.values());
   }, []);
 
-  const loadMore = useCallback(
-    async (refresh = false) => {
-      if (loading || done) return;
-      setLoading(true);
-      try {
-        const data = await fetchImages(refresh ? null : cursor, 60, refresh);
-        setItems((prev) => (refresh ? data.items : mergeUnique(prev, data.items)));
-        setCursor(data.nextCursor);
-        setDone(!data.nextCursor);
-        setMeta({ total: data.total, galleryDir: data.galleryDir });
-      } finally {
-        setLoading(false);
-      }
-    },
-    [cursor, loading, done]
-  );
+  const loadMore = useCallback(async () => {
+    if (!route || loading || done) return;
+    setLoading(true);
+    try {
+      const data = await fetchImages(route.platform, route.user, cursor, 60);
+      setItems((prev) => mergeUnique(prev, data.items));
+      setCursor(data.nextCursor);
+      setDone(!data.nextCursor);
+    } finally {
+      setLoading(false);
+    }
+  }, [route, loading, done, cursor]);
 
   useEffect(() => {
+    setItems([]);
+    setCursor(null);
+    setDone(false);
+  }, [route?.platform, route?.user]);
+
+  useEffect(() => {
+    if (!route) return;
     loadMore();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [route]);
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -78,9 +90,7 @@ export default function Home() {
     const io = new IntersectionObserver(
       (entries) => {
         const first = entries[0];
-        if (first.isIntersecting) {
-          loadMore();
-        }
+        if (first.isIntersecting) loadMore();
       },
       { rootMargin: "1200px" }
     );
@@ -88,7 +98,7 @@ export default function Home() {
     return () => io.disconnect();
   }, [loadMore]);
 
-  // responsive columns via CSS utility classes
+  if (!route) return null;
 
   return (
     <>
@@ -96,8 +106,10 @@ export default function Home() {
       <div className="sticky top-0 z-50 border-b border-neutral-300 bg-white/80 dark:bg-black/60 backdrop-blur">
         <div className="w-full mx-auto px-4 sm:px-6" style={{ maxWidth: `${maxWidthPx}px` }}>
           <header className="py-3 flex items-center justify-between">
-            <div className="opacity-70">{meta ? `Dir: ${meta.galleryDir} · Total ${meta.total} items` : "Loading..."}</div>
-            <div className="flex gap-3 items-center">
+            <div className="opacity-70">
+              Only: {route.platform}/{route.user}
+            </div>
+            <div className="flex items-center gap-3">
               <label className="flex items-center gap-2">
                 <span>Columns</span>
                 <select
@@ -112,20 +124,9 @@ export default function Home() {
                   ))}
                 </select>
               </label>
-              <Link href="/users" className="px-3 py-1.5 rounded border border-neutral-300 dark:border-neutral-700">
-                Users
+              <Link className="px-3 py-1.5 rounded border border-neutral-300 dark:border-neutral-700" href="/">
+                Back to all
               </Link>
-              <button
-                className="px-3 py-1.5 rounded bg-neutral-800 text-white"
-                onClick={() => {
-                  setItems([]);
-                  setCursor(null);
-                  setDone(false);
-                  loadMore(true);
-                }}
-              >
-                Refresh Index
-              </button>
             </div>
           </header>
         </div>
@@ -133,19 +134,20 @@ export default function Home() {
 
       {/* Content */}
       <div className="min-h-screen px-4 sm:px-6 pt-4 sm:pt-6 flex flex-col items-center">
-        <div className="w-full mx-auto" style={{ maxWidth: `${maxWidthPx}px` }}>
+        <div className="w-full mx-auto" style={{ maxWidth: `${maxWidthPx}px` }} ref={containerRef}>
           <MasonryColumns
             items={items as unknown as MItem[]}
             cols={cols}
             colWidth={COL_WIDTH}
             gap={COL_GAP}
-            makeHref={(it) => `/user/${it.platform}/${it.user}`}
-            makeThumbSrc={(it) => `/api/fs/${it.path}`}
+            makeHref={(it) => `/api/fs/${it.path}`}
+            getAnchorProps={(it) => ({ "data-name": it.name })}
             onItemClick={(_, idx) => setViewerIndex(idx)}
+            makeThumbSrc={(it) => `/api/fs/${it.path}`}
             renderFooter={(it) => (
               <>
-                <span className="truncate">
-                  {it.platform}/{it.user}
+                <span className="truncate" title={it.name}>
+                  {it.name}
                 </span>
                 <span>{it.mtimeMs ? new Date(it.mtimeMs).toLocaleDateString() : ""}</span>
               </>
