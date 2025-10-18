@@ -67,7 +67,43 @@ function ffprobeJson(filePath: string): Promise<any | null> {
 export async function indexAll(): Promise<{ count: number }> {
   const root = GALLERY_DIR;
   const db = getDb();
-  const upserts: Array<{
+
+  type ExistingRow = {
+    rel_path: string;
+    size: number;
+    mtime_ms: number;
+    ctime_ms: number;
+    orig_width: number | null;
+    orig_height: number | null;
+    media_type: string | null;
+    duration_ms: number | null;
+  };
+  const existingArr = db
+    .prepare("SELECT rel_path, size, mtime_ms, ctime_ms, orig_width, orig_height, media_type, duration_ms FROM files")
+    .all() as ExistingRow[];
+  const existingMap = new Map<string, ExistingRow>();
+  for (const r of existingArr) existingMap.set(r.rel_path, r);
+
+  const isImageExt = (ext: string) => IMG_EXT.has(ext);
+  const isVideoExt = (ext: string) => VID_EXT.has(ext);
+  const hasCompleteMeta = (ext: string, prev?: ExistingRow): boolean => {
+    if (!prev) return false;
+    if (isImageExt(ext)) {
+      return (prev.orig_width ?? null) != null && (prev.orig_height ?? null) != null;
+    }
+    if (isVideoExt(ext)) {
+      return prev.media_type === "video" && (prev.orig_width ?? null) != null && (prev.orig_height ?? null) != null && (prev.duration_ms ?? null) != null;
+    }
+    return false;
+  };
+  const needsUpdate = (ext: string, st: any, prev?: ExistingRow): boolean => {
+    if (!prev) return true;
+    if (prev.size !== st.size || prev.mtime_ms !== st.mtimeMs || prev.ctime_ms !== st.ctimeMs) return true;
+    if (!hasCompleteMeta(ext, prev)) return true;
+    return false;
+  };
+
+  type Row = {
     rel: string;
     abs: string;
     st: any;
@@ -78,75 +114,12 @@ export async function indexAll(): Promise<{ count: number }> {
     h?: number | null;
     mediaType?: string | null;
     duration?: number | null;
-  }> = [];
-  for await (const rel of walkDir(root)) {
-    const abs = path.join(root, rel);
-    const st = await safeStat(abs);
-    if (!st || !st.isFile()) continue;
-    const { platform, user, name } = parsePlatformUser(rel);
-    upserts.push({ rel, abs, st, platform, user, name });
-    if (upserts.length >= 1000) {
-      const batch = upserts.splice(0, upserts.length);
-      // read image dimensions / video info
-      const chunkSize = 16;
-      for (let i = 0; i < batch.length; i += chunkSize) {
-        const slice = batch.slice(i, i + chunkSize);
-        await Promise.all(
-          slice.map(async (r) => {
-            const ext = path.extname(r.abs).toLowerCase();
-            if (IMG_EXT.has(ext)) {
-              try {
-                const meta = await sharp(r.abs, { failOnError: false }).metadata();
-                r.w = meta.width ?? null;
-                r.h = meta.height ?? null;
-                r.mediaType = "image";
-                r.duration = null;
-              } catch {
-                r.w = null;
-                r.h = null;
-                r.mediaType = "image";
-                r.duration = null;
-              }
-            } else if (VID_EXT.has(ext)) {
-              r.mediaType = "video";
-              const info = await ffprobeJson(r.abs);
-              if (info) {
-                const v = (info.streams || []).find((s: any) => s.codec_type === "video") || {};
-                r.w = (v.width as number) ?? null;
-                r.h = (v.height as number) ?? null;
-                const dur = Number((v.duration as string) || (info.format?.duration as string) || "0");
-                r.duration = isFinite(dur) && dur > 0 ? Math.round(dur * 1000) : null;
-              } else {
-                r.w = null;
-                r.h = null;
-                r.duration = null;
-              }
-            }
-          })
-        );
-      }
-      db.transaction((rows: typeof batch) => {
-        for (const r of rows) {
-          upsertFile({
-            rel_path: r.rel,
-            name: r.name,
-            platform: r.platform,
-            user: r.user,
-            size: r.st.size,
-            mtime_ms: r.st.mtimeMs,
-            ctime_ms: r.st.ctimeMs,
-            orig_width: r.w ?? null,
-            orig_height: r.h ?? null,
-            media_type: r.mediaType ?? null,
-            duration_ms: r.duration ?? null,
-          });
-        }
-      })(batch);
-      await new Promise((r) => setTimeout(r, 0));
-    }
-  }
-  if (upserts.length) {
-    const batch = upserts.splice(0, upserts.length);
+  };
+  const upserts: Row[] = [];
+  let processedCount = 0;
+
+  async function processBatch(batch: Row[]) {
+    if (!batch.length) return;
     const chunkSize = 16;
     for (let i = 0; i < batch.length; i += chunkSize) {
       const slice = batch.slice(i, i + chunkSize);
@@ -184,7 +157,7 @@ export async function indexAll(): Promise<{ count: number }> {
         })
       );
     }
-    db.transaction((rows: typeof batch) => {
+    db.transaction((rows: Row[]) => {
       for (const r of rows) {
         upsertFile({
           rel_path: r.rel,
@@ -201,6 +174,31 @@ export async function indexAll(): Promise<{ count: number }> {
         });
       }
     })(batch);
+    processedCount += batch.length;
+    await new Promise((r) => setTimeout(r, 0));
   }
-  return { count: 0 };
+
+  for await (const rel of walkDir(root)) {
+    const abs = path.join(root, rel);
+    const st = await safeStat(abs);
+    if (!st || !st.isFile()) continue;
+    const { platform, user, name } = parsePlatformUser(rel);
+    const ext = path.extname(abs).toLowerCase();
+    const prev = existingMap.get(rel);
+    if (!needsUpdate(ext, st, prev)) {
+      continue;
+    }
+    upserts.push({ rel, abs, st, platform, user, name });
+    if (upserts.length >= 1000) {
+      const batch = upserts.splice(0, upserts.length);
+      await processBatch(batch);
+    }
+  }
+
+  if (upserts.length) {
+    const batch = upserts.splice(0, upserts.length);
+    await processBatch(batch);
+  }
+
+  return { count: processedCount };
 }
