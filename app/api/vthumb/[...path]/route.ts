@@ -57,7 +57,6 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ path: 
   // generate single-frame webp thumbnail
   await new Promise<void>((resolve, reject) => {
     const args = [
-      "-hide_banner",
       "-v",
       "error",
       "-nostats",

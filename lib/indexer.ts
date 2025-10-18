@@ -48,7 +48,7 @@ function parsePlatformUser(rel: string): { platform: string | null; user: string
 
 function ffprobeJson(filePath: string): Promise<any | null> {
   return new Promise((resolve) => {
-    const p = spawn("ffprobe", ["-hide_banner", "-v", "error", "-nostats", "-nostdin", "-print_format", "json", "-show_streams", "-show_format", filePath], {
+    const p = spawn("ffprobe", ["-v", "error", "-print_format", "json", "-show_entries", "format=duration:stream=width,height,duration,codec_type", filePath], {
       stdio: ["ignore", "pipe", "ignore"],
     });
     let out = "";
