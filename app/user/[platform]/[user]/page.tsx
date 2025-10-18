@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useColumnSetting } from "../../../../lib/columns";
-import { COL_WIDTH, COL_GAP } from "../../../../lib/constants";
 import MasonryColumns, { type MItem } from "../../../../components/MasonryColumns";
 import LightboxViewer from "../../../../components/LightboxViewer";
 
@@ -50,7 +49,7 @@ export default function UserView({ params }: { params: Promise<{ platform: strin
   const [done, setDone] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const { cols, setCols, columnStyle, maxWidthPx } = useColumnSetting(3);
+  const { cols, setCols, columnStyle, maxWidthPx, colWidth, colGap } = useColumnSetting(3);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   const mergeUnique = useCallback((prev: Img[], incoming: Img[]) => {
@@ -135,13 +134,13 @@ export default function UserView({ params }: { params: Promise<{ platform: strin
       </div>
 
       {/* Content */}
-      <div className="min-h-screen px-4 sm:px-6 pt-4 sm:pt-6 flex flex-col items-center">
+      <div className="min-h-screen px-2 sm:px-6 pt-2 sm:pt-6 flex flex-col items-center">
         <div className="w-full mx-auto" style={{ maxWidth: `${maxWidthPx}px` }} ref={containerRef}>
           <MasonryColumns
             items={items as unknown as MItem[]}
             cols={cols}
-            colWidth={COL_WIDTH}
-            gap={COL_GAP}
+            colWidth={colWidth}
+            gap={colGap}
             makeHref={(it) => `${BASE}/api/fs/${it.path}`}
             getAnchorProps={(it) => ({ "data-name": it.name })}
             onItemClick={(_, idx) => setViewerIndex(idx)}

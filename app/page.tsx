@@ -134,13 +134,13 @@ export default function Home() {
       </div>
 
       {/* Content */}
-      <div className="min-h-screen px-4 sm:px-6 pt-4 sm:pt-6 flex flex-col items-center">
+      <div className="min-h-screen px-2 sm:px-6 pt-2 sm:pt-6 flex flex-col items-center">
         <div className="w-full mx-auto" style={{ maxWidth: `${maxWidthPx}px` }}>
           <MasonryColumns
             items={items as unknown as MItem[]}
             cols={cols}
-            colWidth={COL_WIDTH}
-            gap={COL_GAP}
+            colWidth={colWidth}
+            gap={colGap}
             makeHref={(it) => `${BASE}/user/${it.platform}/${it.user}`}
             makeThumbSrc={(it) => `${BASE}/api/fs/${it.path}`}
             onItemClick={(_, idx) => setViewerIndex(idx)}

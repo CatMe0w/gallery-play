@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MasonryColumns, { type MItem } from "../../components/MasonryColumns";
 import { useColumnSetting } from "../../lib/columns";
-import { COL_WIDTH, COL_GAP } from "../../lib/constants";
 import Link from "next/link";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
@@ -38,7 +37,7 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [total, setTotal] = useState<number | null>(null);
-  const { cols, setCols, maxWidthPx } = useColumnSetting(3);
+  const { cols, setCols, maxWidthPx, colWidth, colGap } = useColumnSetting(3);
 
   const mergeUniqueUsers = useCallback((prev: UserCover[], incoming: UserCover[]) => {
     // De-duplicate by unique platform+user key
@@ -115,13 +114,13 @@ export default function UsersPage() {
       </div>
 
       {/* Content */}
-      <div className="min-h-screen px-4 sm:px-6 pt-4 sm:pt-6 flex flex-col items-center">
+      <div className="min-h-screen px-2 sm:px-6 pt-2 sm:pt-6 flex flex-col items-center">
         <div className="w-full mx-auto" style={{ maxWidth: `${maxWidthPx}px` }}>
           <MasonryColumns
             items={masonryItems}
             cols={cols}
-            colWidth={COL_WIDTH}
-            gap={COL_GAP}
+            colWidth={colWidth}
+            gap={colGap}
             makeHref={(it) => `${BASE}/user/${it.platform}/${it.user}`}
             makeThumbSrc={(it) => `${BASE}/api/fs/${it.path}`}
             renderFooter={(it) => (
