@@ -24,7 +24,7 @@ export default function LightboxViewer({ items, index, onClose, onNavigate }: Li
   const title = useMemo(() => {
     if (!it) return "";
     const parts = [it.platform, it.user, it.name].filter(Boolean);
-    return parts.join(" / ");
+    return parts.join("/");
   }, [it]);
 
   const go = useCallback(
@@ -58,7 +58,7 @@ export default function LightboxViewer({ items, index, onClose, onNavigate }: Li
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/90 flex flex-col" onClick={onClose} role="dialog" aria-modal="true">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 text-white">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 text-white text-sm">
         <div className="truncate" title={title}>
           {title}
         </div>

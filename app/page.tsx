@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useColumnSetting } from "../lib/columns";
-import { COL_WIDTH, COL_GAP } from "../lib/constants";
 import MasonryColumns, { type MItem } from "../components/MasonryColumns";
 import LightboxViewer from "../components/LightboxViewer";
 
@@ -39,8 +38,8 @@ export default function Home() {
   const [cursor, setCursor] = useState<Cursor>(null);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
-  const [meta, setMeta] = useState<{ total: number; galleryDir: string } | null>(null);
-  const { cols, setCols, maxWidthPx, columnStyle } = useColumnSetting(3);
+  const [meta, setMeta] = useState<{ total: number } | null>(null);
+  const { cols, setCols, maxWidthPx, columnStyle, colWidth, colGap } = useColumnSetting(3);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   const mergeUnique = useCallback((prev: Img[], incoming: Img[]) => {
@@ -60,7 +59,7 @@ export default function Home() {
         setItems((prev) => (refresh ? data.items : mergeUnique(prev, data.items)));
         setCursor(data.nextCursor);
         setDone(!data.nextCursor);
-        setMeta({ total: data.total, galleryDir: data.galleryDir });
+        setMeta({ total: data.total });
       } finally {
         setLoading(false);
       }
@@ -95,13 +94,13 @@ export default function Home() {
   return (
     <>
       {/* Top Bar */}
-      <div className="sticky top-0 z-50 border-b border-neutral-300 bg-white/80 dark:bg-black/60 backdrop-blur">
+      <div className="sticky top-0 z-50 bg-white/80 dark:bg-black/60 backdrop-blur text-sm">
         <div className="w-full mx-auto px-4 sm:px-6" style={{ maxWidth: `${maxWidthPx}px` }}>
-          <header className="py-3 flex items-center justify-between">
-            <div className="opacity-70">{meta ? `Dir: ${meta.galleryDir} · Total ${meta.total} items` : "Loading..."}</div>
-            <div className="flex gap-3 items-center">
+          <header className="py-3 flex items-center justify-between gap-3 flex-wrap max-w-full">
+            <div className="opacity-70 min-w-0 flex-1 truncate">{meta ? `${meta.total} item${meta.total === 1 ? "" : "s"}` : "Loading..."}</div>
+            <div className="flex gap-3 items-center flex-none whitespace-nowrap">
               <label className="flex items-center gap-2">
-                <span>Columns</span>
+                {/* <span>Cols</span> */}
                 <select
                   value={cols}
                   onChange={(e) => setCols(Number(e.target.value))}
@@ -126,7 +125,8 @@ export default function Home() {
                   loadMore(true);
                 }}
               >
-                Refresh Index
+                {/* Refresh Index */}
+                Sync
               </button>
             </div>
           </header>

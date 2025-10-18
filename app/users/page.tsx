@@ -86,13 +86,13 @@ export default function UsersPage() {
   return (
     <>
       {/* Top Bar */}
-      <div className="sticky top-0 z-50 border-b border-neutral-300 bg-white/80 dark:bg-black/60 backdrop-blur">
+      <div className="sticky top-0 z-50 bg-white/80 dark:bg-black/60 backdrop-blur text-sm">
         <div className="w-full mx-auto px-4 sm:px-6" style={{ maxWidth: `${maxWidthPx}px` }}>
-          <header className="py-3 flex items-center justify-between">
-            <div className="opacity-70">{total != null ? `Total users: ${total}` : "Loading..."}</div>
-            <div className="flex gap-3 items-center">
+          <header className="py-3 flex items-center justify-between gap-3 flex-wrap max-w-full">
+            <div className="opacity-70 min-w-0 flex-1 truncate">{total != null ? `${total} user${total === 1 ? "" : "s"}` : "Loading..."}</div>
+            <div className="flex gap-3 items-center flex-none whitespace-nowrap">
               <label className="flex items-center gap-2">
-                <span>Columns</span>
+                {/* <span>Cols</span> */}
                 <select
                   value={cols}
                   onChange={(e) => setCols(Number(e.target.value))}
@@ -106,7 +106,7 @@ export default function UsersPage() {
                 </select>
               </label>
               <Link className="px-3 py-1.5 rounded border border-neutral-300 dark:border-neutral-700" href="/">
-                Back to all
+                Home
               </Link>
             </div>
           </header>
